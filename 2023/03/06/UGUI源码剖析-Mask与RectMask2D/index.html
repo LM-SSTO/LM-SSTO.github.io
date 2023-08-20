@@ -33,15 +33,15 @@
 
   <!-- feed -->
   <!-- 页面元数据 -->
-  <title>UGUI源码剖析-Mask与RectMask2D - SSTO的博客</title>
+  <title>UGUI-Mask与RectMask2D - SSTO的博客</title>
   <meta name="keywords" content="UGUI,null">
   <meta desc name="description" content="游戏开发 - SSTO - SSTO的博客">
   
 <meta property="og:type" content="article">
-<meta property="og:title" content="UGUI源码剖析-Mask与RectMask2D">
+<meta property="og:title" content="UGUI-Mask与RectMask2D">
 <meta property="og:url" content="http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/index.html">
 <meta property="og:site_name" content="SSTO的博客">
-<meta property="og:description" content="首先下载Unity内建着色器源码[链接]:https:&#x2F;&#x2F;github.com&#x2F;chsxf&#x2F;unity-built-in-shaders">
+<meta property="og:description" content="在UGUI中有两种遮罩组件，RectMask2D与Mask，其中RectMask2D不依赖额外的Image节点，裁剪区域就是自己的矩形区域大小。而在开发中，也有存在非矩形的不规则形状裁剪需求，这时就需要使用到Mask组件，Mask组件通过额外的一个Image来实现。 实现原理差异MaskMask这种不规则形状的遮罩，是使用了Stencil Buffer（模板缓冲区）来实现。Stencil Buff">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png">
 <meta property="article:published_time" content="2023-03-06T14:20:48.000Z">
@@ -2112,7 +2112,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     root: '/',
     debug: "env",
     default: {"avatar":"https://unpkg.com/volantis-static@0.0.1660614606622/media/placeholder/avatar/round/3442075.svg","link":"https://unpkg.com/volantis-static@0.0.1660614606622/media/placeholder/link/8f277b4ee0ecd.svg","cover":"https://unpkg.com/volantis-static@0.0.1660614606622/media/placeholder/cover/76b86c0226ffd.svg","image":"https://unpkg.com/volantis-static@0.0.1660614606622/media/placeholder/image/2659360.svg"},
-    lastupdate: new Date(1692401764124),
+    lastupdate: new Date(1692540411448),
     cdn: {
       izitoast_css: 'https://cdn.bootcdn.net/ajax/libs/izitoast/1.4.0/css/iziToast.min.css',
       izitoast_js: 'https://cdn.bootcdn.net/ajax/libs/izitoast/1.4.0/js/iziToast.min.js',
@@ -2464,7 +2464,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
     
     
       <h1 class="title" itemprop="name headline">
-        UGUI源码剖析-Mask与RectMask2D
+        UGUI-Mask与RectMask2D
       </h1>
       <div class='new-meta-box'>
         
@@ -2512,7 +2512,13 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
   <div id="layoutHelper-page-plugins"></div>
   <div id="post-body" itemprop="articleBody">
-    <p> 首先下载Unity内建着色器源码[链接]:<a target="_blank" rel="noopener" href="https://github.com/chsxf/unity-built-in-shaders">https://github.com/chsxf/unity-built-in-shaders</a></p>
+    <p>在UGUI中有两种遮罩组件，RectMask2D与Mask，其中RectMask2D不依赖额外的Image节点，裁剪区域就是自己的矩形区域大小。而在开发中，也有存在非矩形的不规则形状裁剪需求，这时就需要使用到Mask组件，Mask组件通过额外的一个Image来实现。</p>
+<h3 id="实现原理差异"><a href="#实现原理差异" class="headerlink" title="实现原理差异"></a>实现原理差异</h3><h4 id="Mask"><a href="#Mask" class="headerlink" title="Mask"></a>Mask</h4><p>Mask这种不规则形状的遮罩，是使用了Stencil Buffer（模板缓冲区）来实现。Stencil Buffer是一种用于限制哪些像素能够被绘制的技术。通常，Mask先将自己绘制到Stencil Buffer中，并将其区域定义为可绘制的区域。然后，其他UI元素将会检查Stencil Buffer中的像素，并根据像素是否可绘制来确定是否绘制自己。</p>
+<p>子Graphics节点在这个区域范围内的部分可以被渲染，在image有效像素外的不渲染。</p>
+<h4 id="RectMask2D"><a href="#RectMask2D" class="headerlink" title="RectMask2D"></a>RectMask2D</h4><p>RectMask2D使用了RectTransform中的矩形范围来裁剪其子元素。RectMask2D首先计算自身和其子元素的RectTransform之间的重叠区域，然后只会绘制重叠区域内的子元素，而将超出范围的部分进行裁剪。</p>
+<h3 id="性能差异"><a href="#性能差异" class="headerlink" title="性能差异"></a>性能差异</h3><h4 id="RectMask2D-1"><a href="#RectMask2D-1" class="headerlink" title="RectMask2D"></a>RectMask2D</h4><p>节点下的所有节点都不能与外界UI节点合批，且多个RectMask2D之间不能合批。</p>
+<h4 id="Mask-1"><a href="#Mask-1" class="headerlink" title="Mask"></a>Mask</h4><p>Mask会在首尾（首&#x3D;Mask节点，尾&#x3D;Mask节点下的孩子遍历完后）多出两个drawcall，多个Mask间如果符合合批条件这两个drawcall可以对应合批</p>
+<p>Mask内的UI节点和非Mask外的UI节点不能合批，但多个Mask内的UI节点间如果符合合批条件，可以合批。</p>
 
   </div>
   
@@ -2566,7 +2572,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-qq" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI源码剖析-Mask与RectMask2D - SSTO的博客&summary="
+          target="_blank" href="http://connect.qq.com/widget/shareqq/index.html?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI-Mask与RectMask2D - SSTO的博客&summary="
           
           >
           
@@ -2578,7 +2584,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-qzone" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI源码剖析-Mask与RectMask2D - SSTO的博客&summary="
+          target="_blank" href="https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI-Mask与RectMask2D - SSTO的博客&summary="
           
           >
           
@@ -2590,7 +2596,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
       
         <a class="-mob-share-weibo" title="" rel="external nofollow noopener noreferrer noopener"
           
-          target="_blank" href="http://service.weibo.com/share/share.php?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI源码剖析-Mask与RectMask2D - SSTO的博客&summary="
+          target="_blank" href="http://service.weibo.com/share/share.php?url=http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/&title=UGUI-Mask与RectMask2D - SSTO的博客&summary="
           
           >
           
@@ -2692,7 +2698,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 
 
   <div class='content'>
-      
+      <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%B7%AE%E5%BC%82"><span class="toc-text">实现原理差异</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Mask"><span class="toc-text">Mask</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RectMask2D"><span class="toc-text">RectMask2D</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%A7%E8%83%BD%E5%B7%AE%E5%BC%82"><span class="toc-text">性能差异</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#RectMask2D-1"><span class="toc-text">RectMask2D</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Mask-1"><span class="toc-text">Mask</span></a></li></ol></li></ol>
   </div>
 </section>
 
@@ -3186,7 +3192,7 @@ if (/*@cc_on!@*/false || (!!window.MSInputMethodContext && !!document.documentMo
 </script>
 
 
-  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"SSTO的博客","url":"http://example.com/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/","sameAs":["https://github.com/volantis-x"],"description":"游戏开发"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"http://example.com/","name":"SSTO的博客"}},{"@type":"ListItem","position":3,"item":{"@id":"http://example.com/2023/03/06/UGUI源码剖析-Mask与RectMask2D/","name":"UGUI源码剖析-Mask与RectMask2D"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"SSTO的博客","url":"http://example.com/","keywords":null,"description":"游戏开发","author":{"@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/","description":"游戏开发"},"publisher":{"@type":"Organization","name":"SSTO的博客","url":"http://example.com/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"http://example.com?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"UGUI源码剖析-Mask与RectMask2D","description":"游戏开发","inLanguage":"zh-CN","mainEntityOfPage":{"@type":"WebPage","@id":"http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/"},"author":{"@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/"},"publisher":{"@type":"Organization","name":"SSTO的博客","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/","wordCount":0,"datePublished":"2023-03-06T14:20:48.000Z","dateModified":"2023-03-06T14:20:48.000Z","keywords":"UGUI","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
+  <script type="application/ld+json">[{"@context":"http://schema.org","@type":"Organization","name":"SSTO的博客","url":"http://example.com/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},{"@context":"http://schema.org","@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/","sameAs":["https://github.com/volantis-x"],"description":"游戏开发"},{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"http://example.com/","name":"SSTO的博客"}},{"@type":"ListItem","position":3,"item":{"@id":"http://example.com/2023/03/06/UGUI源码剖析-Mask与RectMask2D/","name":"UGUI-Mask与RectMask2D"}}]},{"@context":"http://schema.org","@type":"WebSite","name":"SSTO的博客","url":"http://example.com/","keywords":null,"description":"游戏开发","author":{"@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/","description":"游戏开发"},"publisher":{"@type":"Organization","name":"SSTO的博客","url":"http://example.com/","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"potentialAction":{"@type":"SearchAction","name":"Site Search","target":{"@type":"EntryPoint","urlTemplate":"http://example.com?s={search_term_string}"},"query-input":"required name=search_term_string"}},{"@context":"http://schema.org","@type":"BlogPosting","headline":"UGUI-Mask与RectMask2D","description":"游戏开发","inLanguage":"zh-CN","mainEntityOfPage":{"@type":"WebPage","@id":"http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/"},"author":{"@type":"Person","name":"SSTO","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png"},"url":"http://example.com/"},"publisher":{"@type":"Organization","name":"SSTO的博客","logo":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}},"url":"http://example.com/2023/03/06/UGUI%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-Mask%E4%B8%8ERectMask2D/","wordCount":0,"datePublished":"2023-03-06T14:20:48.000Z","dateModified":"2023-03-06T14:20:48.000Z","keywords":"UGUI","image":{"@type":"ImageObject","url":"https://unpkg.com/volantis-static@0.0.1660614606622/media/org.volantis/blog/favicon/android-chrome-192x192.png","width":192,"height":192}}]</script>
 
 
 
